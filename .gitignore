@@ -1,1 +1,4 @@
 dataset/*
+bin/*
+bin
+k-center

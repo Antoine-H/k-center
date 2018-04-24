@@ -14,6 +14,8 @@ Main module
 #include "algo_packed.h"
 #include "algo_trajectories.h"
 
+#include "data_graph.h"
+
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
@@ -25,7 +27,7 @@ char *prog_name = NULL;
 
 typedef enum {
 	SLIDING_K_CENTER, FULLY_ADV_K_CENTER, PACKED_K_CENTER,
-	TRAJECTORIES_K_CENTER,
+	TRAJECTORIES_K_CENTER, GRAPH,
 	LAST_ALGO_TYPE
 } Algo_type;
 
@@ -59,7 +61,9 @@ void help(void)
 	fprintf(stderr,
 		"Fully adversary Trajectories: %s -p [-l log_file -n nb_threads] k eps d_min d_max data_file query_file\n",
 		prog_name);
-
+	fprintf(stderr,
+		"Graphs: %s -g data_file dummy1 dummy2 dummy3 dummy4 dummy5\n",
+		prog_name);
 }
 
 double n_log_n(double n)
@@ -82,7 +86,7 @@ int __parse_options(int argc, char *argv[], struct program_args *prog_args)
 {
 	Error_enum tmp;
 	int opt;
-	while ((opt = getopt(argc, argv, "hvl:tsmpn:bc:u:o")) != -1) {
+	while ((opt = getopt(argc, argv, "hvltsmpnbcuog")) != -1) {
 		switch (opt) {
 		case 'u':
 			enable_time_log(optarg);
@@ -125,6 +129,9 @@ int __parse_options(int argc, char *argv[], struct program_args *prog_args)
 				exit(EXIT_FAILURE);
 			}
 			break;
+		case 'g':
+			prog_args->algo = GRAPH;
+			break;
 		default:
 			fprintf(stderr, "unknown option\n");
 			help();
@@ -140,12 +147,17 @@ int parse_options(int argc, char *argv[], struct program_args *prog_args)
 	int next_arg = 0;
 	prog_name = argv[0];
 	init_prog_args(prog_args);
-	if (__parse_options(argc, argv, prog_args))
+	if (__parse_options(argc, argv, prog_args)) {
 		return 1;
+	}
 	if (argc - optind != 6) {
 		help();
 		exit(EXIT_FAILURE);
 	}
+	if (prog_args->algo == GRAPH) {
+		prog_args->points_path = argv[optind];
+		printf("The file is: %s.\n", prog_args->points_path);
+	} else {
 	if (strtoui_wrapper(argv[optind], &prog_args->k) || 0 == prog_args->k) {
 		fprintf(stderr, "positive k required\n");
 		help();
@@ -192,7 +204,7 @@ int parse_options(int argc, char *argv[], struct program_args *prog_args)
 	}
 	printf("k: %d eps: %lf d_min: %lf d_max: %lf\n", prog_args->k,
 	       prog_args->epsilon, prog_args->d_min, prog_args->d_max);
-	return 0;
+	} return 0;
 }
 
 void sliding_k_center(struct program_args *prog_args)
@@ -328,6 +340,10 @@ int main(int argc, char *argv[])
 			trajectories_parallel_k_center(&prog_args);
 		else
 			trajectories_k_center(&prog_args);
+		break;
+	case GRAPH:
+		printf("Graphs mode chosen.\n");
+		parse_graph(prog_args.points_path);
 		break;
 	default:
 		fprintf(stderr, "Unknow algorithm\n");
