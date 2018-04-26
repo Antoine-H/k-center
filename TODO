@@ -1,2 +1,0 @@
-Fix update pointers on removing incoming edges. Then do first_free_edge then first_free_node.
-
