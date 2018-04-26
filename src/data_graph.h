@@ -23,9 +23,9 @@ typedef struct node node;
 typedef struct edge edge;
 
 struct node {
-	unsigned int index;
-	unsigned int indeg;
-	unsigned int outdeg;
+	size_t index;
+	size_t indeg;
+	size_t outdeg;
 	edge* firstout;
 	edge* lastout;
 	edge* firstin;
@@ -35,7 +35,7 @@ struct node {
 };
 
 struct edge {
-	unsigned int timestamp;
+	size_t timestamp;
 	int weight;
 	node* source;
 	node* destination;
@@ -54,34 +54,41 @@ struct graph {
 	edge* last_edge;
 	node* first_free_node;
 	edge* first_free_edge;
+	size_t nb_edges;
+	size_t nb_nodes;
+	size_t max_node_index;
+	size_t max_edge_index;
 };
 
-void print_nodes(graph *g);
+void print_node     (node* node);
+void print_edge     (edge* edge);
+void print_nodes      (graph* g);
+void print_edges      (graph* g);
+void print_free_edges (graph* g);
+void print_free_nodes (graph* g);
+void print_node_array (graph* g);
+void print_edge_array (graph* g);
+void print_nodes_v    (graph* g);
+void print_edges_v    (graph* g);
+void print_graph      (graph* g);
 
-void print_edges(graph *g);
+graph* init_graph(void);
+void increase_arrays(graph* g);
 
-node* exist_node(graph *g, unsigned int node_id);
-
-edge* exist_edge(graph* g, unsigned int timestamp, node* src, node* dst,
-									int weight);
+node* exist_node(graph* g, size_t node_id);
+edge* exist_edge(graph* g, size_t timestamp, node* src, node* dst, int weight);
 
 void remove_edge (edge* edge_to_remove, graph* g);
-
 void remove_node (node* node_to_remove, graph* g);
 
 node* get_free_node(graph* g);
-
 edge* get_free_edge(graph* g);
 
-int parse_graph(char *file);
+node* add_source      (char* buff, graph* g);
+node* add_destination (char* buff, graph* g);
+edge* add_edge        (char* buff, graph* g, node* source, node* destination);
 
-void increase_arrays(graph* g);
-
-node* add_source(char *buff, graph *g);
-
-node* add_destination(char* buff, graph* g);
-
-edge* add_edge(char* buff, graph* g, node* source, node* destination);
+Error_enum parse_graph(char *file);
 
 #endif
 

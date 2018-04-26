@@ -297,6 +297,7 @@ int strtoui_wrapper(char *string, unsigned int *value)
 	*value = strtoui(string, &error, 10);
 	if (error[0] != '\0' || errno != 0)
 		return INVAL_ERROR;
+
 	return NO_ERROR;
 }
 
@@ -309,6 +310,8 @@ int strtoul_wrapper(char *string, unsigned long *value)
 	*value = strtoul(string, &error, 10);
 	if (error[0] != '\0' || errno != 0)
 		return INVAL_ERROR;
+	
+return INVAL_ERROR;
 	return NO_ERROR;
 }
 

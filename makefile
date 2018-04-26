@@ -1,5 +1,5 @@
 EXEC=k-center
-CFLAGS=-ansi -Wall -Wextra -pthread -Wconversion
+CFLAGS=-ansi -Wall -Wextra -pthread -Wconversion -pedantic
 OFLAGS=-g -O2 -DNDEBUG
 LDFLAGS=-lm -L/usr/lib/x86_64-linux-gnu -pthread
 LIBFLAGS=-D_REENTRANT 
