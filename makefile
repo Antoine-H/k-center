@@ -1,5 +1,5 @@
 EXEC=k-center
-CFLAGS=-ansi -Wall -Wextra -pthread -Wconversion -pedantic
+CFLAGS=-ansi -Wall -Wextra -pthread -Wconversion
 OFLAGS=-g -O2 -DNDEBUG
 LDFLAGS=-lm -L/usr/lib/x86_64-linux-gnu -pthread
 LIBFLAGS=-D_REENTRANT 
@@ -43,7 +43,9 @@ $(BIN)lookup.o: lookup.c lookup.h utils.h
 
 $(BIN)data_graph.o: data_graph.c data_graph.h
 
-$(EXEC): $(BIN)main.o $(BIN)algo_sliding.o $(BIN)algo_packed.o $(BIN)algo_fully_adv.o $(BIN)algo_trajectories.o $(BIN)query.o $(BIN)utils.o $(BIN)point.o $(BIN)data_sliding.o $(BIN)data_fully_adv.o $(BIN)data_trajectories.o $(BIN)data_packed.o $(BIN)set.o $(BIN)lookup.o $(BIN)data_graph.o
+$(BIN)dynamic__all_pairs_shortest_paths.o: dynamic_all_pairs_shortest_paths.c dynamic_all_pairs_shortest_paths.h
+
+$(EXEC): $(BIN)main.o $(BIN)algo_sliding.o $(BIN)algo_packed.o $(BIN)algo_fully_adv.o $(BIN)algo_trajectories.o $(BIN)query.o $(BIN)utils.o $(BIN)point.o $(BIN)data_sliding.o $(BIN)data_fully_adv.o $(BIN)data_trajectories.o $(BIN)data_packed.o $(BIN)set.o $(BIN)lookup.o $(BIN)data_graph.o $(BIN)dynamic_all_pairs_shortest_paths.o
 	$(CC) -o $@ $^  $(CFLAGS) $(LDFLAGS) $(OFLAGS)
 
 $(BIN)utils.o: utils.c utils.h

@@ -12,7 +12,7 @@ This module contrains the code about graph managment.
 
 #include "utils.h"
 
-#define INIT_ARRAY_SIZE 100000
+#define INIT_ARRAY_SIZE 10000
 
 struct node;
 struct edge;
@@ -26,6 +26,7 @@ struct node {
 	size_t index;
 	size_t indeg;
 	size_t outdeg;
+	size_t index_array;
 	edge* firstout;
 	edge* lastout;
 	edge* firstin;
@@ -35,8 +36,9 @@ struct node {
 };
 
 struct edge {
-	size_t timestamp;
 	int weight;
+	size_t timestamp;
+	size_t index_array;
 	node* source;
 	node* destination;
 	edge* sourceprev;
@@ -58,6 +60,7 @@ struct graph {
 	size_t nb_nodes;
 	size_t max_node_index;
 	size_t max_edge_index;
+	int** dist;
 };
 
 void print_node     (node* node);

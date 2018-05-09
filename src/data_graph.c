@@ -1,19 +1,23 @@
-/**
-This module contains the code about graph managment.
+/*
+ * This module contains the code about graph managment.
  * Removing an edge may disconnect the graph.
-**/
+ */
 
 /* TODO:
  *
  * Hash table map index - pointer node and edge for exist_edge and exist_node.
+ * Need a map node index - array index. Edge index - array index.
  *
  * Catch errors from strto.
  *
+ * Redo update dist.
  */
 
 #include "data_graph.h"
+#include "dynamic_all_pairs_shortest_paths.h"
 
-#define INIT_ARRAY_SIZE 100000
+size_t max_array_edge = INIT_ARRAY_SIZE;
+size_t max_array_node = INIT_ARRAY_SIZE;
 
 void print_nodes(graph *g) {
 	if (g->nb_nodes > 0) {
@@ -153,14 +157,22 @@ void print_graph(graph* g) {
 
 void print_node_array (graph* g) {
 	size_t i = 0;
-	for (i = 0; i < g->nb_nodes+3; i++)
-			printf("%zu - %zu.\n", i, g->node_array[i].index);
+	for (i = 0; i < g->max_node_index; i++) {
+		printf("%zu - %zu.\n", i, g->node_array[i].index);
+		if (&g->node_array[i] == g->first_free_node)
+			printf("First free node is right above.\n");
+	}
+	printf("----------------\n");
 }
 
 void print_edge_array (graph* g) {
 	size_t i = 0;
-	for (i = 0; i < g->nb_nodes+3; i++)
-			printf("%zu - %zu.\n", i, g->edge_array[i].timestamp);
+	for (i = 0; i < g->max_edge_index; i++) {
+		printf("%zu - %zu.\n", i, g->edge_array[i].timestamp);
+		if (&g->edge_array[i] == g->first_free_edge)
+			printf("Frist free edge is right above.\n");
+	}
+	printf("----------------\n");
 }
 
 void print_nodes_v (graph* g){
@@ -361,13 +373,17 @@ void remove_node (node* node_to_remove, graph* g) {
 
 node* get_free_node(graph* g) {
 	node* res = g->first_free_node;
+	/*print_node_array(g);
+	printf("%zu.\n", g->nb_nodes);*/
 	if (g->first_free_node == &g->node_array[g->max_node_index]) {
 		printf("Incrementing first_free_node.\n");
+		g->first_free_node->index_array = g->nb_nodes;
 		g->first_free_node++;
 		g->first_free_node->prev = g->first_free_node;
 		g->first_free_node->next = g->first_free_node;
 	} else {
 		printf("Using first free node pointer.\n");
+		g->first_free_node->index_array = g->first_free_node->prev->index_array;
 		g->first_free_node->prev = NULL;
 		g->first_free_node = g->first_free_node->next;
 		g->first_free_node->prev->next = NULL;
@@ -377,6 +393,8 @@ node* get_free_node(graph* g) {
 }
 
 edge* get_free_edge(graph* g) {
+	/*print_edge_array(g);
+	printf("%zu.\n", g->nb_edges);*/
 	edge* res = g->first_free_edge;
 	if (g->first_free_edge == &g->edge_array[g->max_edge_index]) {
 		printf("Incrementing first_free_edge.\n");
@@ -393,11 +411,21 @@ edge* get_free_edge(graph* g) {
 	return res;
 }
 
-graph* init_graph(void) {
-	size_t max_array_node = INIT_ARRAY_SIZE;
-	size_t max_array_edge = INIT_ARRAY_SIZE;
+void done_graph(graph *g) {
+	unsigned int m;
+	free(g->node_array);
+	free(g->edge_array);
 
-	graph *g = malloc_wrapper(sizeof(*g));
+	for (m = 0; m < max_array_node; m++)
+		free(g->dist[m]);
+
+	free(g->dist);
+	free(g);
+}
+
+graph* init_graph(void) {
+	unsigned int i, j;
+	graph *g = malloc_wrapper(sizeof(graph));
 
 	g->node_array = calloc_wrapper(max_array_node, sizeof(node));
 	g->edge_array = calloc_wrapper(max_array_edge, sizeof(edge));
@@ -415,19 +443,34 @@ graph* init_graph(void) {
 	g->first_free_node->next = g->first_free_node;
 	g->first_free_node->next = g->first_free_node;
 
+	g->dist = calloc_wrapper(max_array_node, sizeof(int*));
+	for (i = 0; i < max_array_node; i++)
+		g->dist[i] = calloc_wrapper(max_array_node, sizeof(int));
+
+	/* Temporary init to 100. */
+	for (i = 0; i < max_array_node; i++) {
+		for (j = 0; j < max_array_node; j++) {
+			g->dist[i][j] = 100;
+		}
+	}
 	return g;
 }
 
 void increase_arrays(graph* g) {
-		size_t max_array_node = INIT_ARRAY_SIZE;
-		size_t max_array_edge = INIT_ARRAY_SIZE;
-
-		if (g->edge_array[max_array_edge-1].timestamp != 0)
+		if (g->edge_array[max_array_edge-1].timestamp != 0) {
+			print_edge_array(g);
 			g->edge_array = realloc_wrapper(g->edge_array, &max_array_edge,
-																			sizeof(g->edge_array));
-		if (g->node_array[max_array_node-1].index != 0)
+																			sizeof(edge));
+			g->last_edge = g->edge_array + (g->nb_edges - 1);
+			g->first_free_edge = g->edge_array + g->nb_edges;
+		} if (g->node_array[max_array_node-1].index != 0) {
+			print_node_array(g);
 			g->node_array = realloc_wrapper(g->node_array, &max_array_node,
-																			sizeof(g->node_array));
+																			sizeof(node));
+			print_node_array(g);
+			g->last_node = g->node_array + (g->nb_nodes - 1);
+			g->first_free_node = g->node_array + g->nb_nodes;
+		}
 }
 
 node* add_source(char* buff, graph *g) {
@@ -436,7 +479,7 @@ node* add_source(char* buff, graph *g) {
 	node *source       = NULL;
 
 	if ((tmp = strtoui_wrapper(buff, &index))) {
-		printf("There has been an error importing the file.\n");
+		printf("There has been an error importing the file. Source node.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -488,7 +531,7 @@ node* add_destination(char* buff, graph* g) {
 
 	buff = strtok(NULL, " ");
 	if ((tmp  = strtoui_wrapper(buff, &index))) {
-		printf("There has been an error importing the file.\n");
+		printf("There has been an error importing the file. Destination node.\n");
 		exit(EXIT_FAILURE);
 	}
 	destination = exist_node(g, index);
@@ -540,13 +583,13 @@ edge* add_edge(char* buff, graph* g, node* source, node* destination) {
 
 	buff = strtok(NULL, " ");
 	if ((tmp  = strtoi_wrapper(buff, &weight))) {
-		printf("There has been an error importing the file.\n");
+		printf("There has been an error importing the file. Weight\n");
 		exit(EXIT_FAILURE);
 	}
 
 	buff = strtok(NULL, " ");
 	if ((tmp  = strtoui_wrapper(buff, &timestamp))) {
-		/*printf("There has been an error importing the file.\n");*/
+		/*printf("There has been an error importing the file. Timestamp.\n");*/
 		/*exit(EXIT_FAILURE);*/
 	}
 
@@ -634,10 +677,58 @@ Error_enum parse_graph(char* file) {
 			node *source           = add_source(buff,g);
 			node *destination = add_destination(buff,g);
 			add_edge(buff, g, source, destination);
+			update_dist(source, g);
+			update_dist(destination, g);
 		}
 	}
 	fclose(f);
 
+	/*print_node_array(g);
+	print_edge_array(g);*/
+
+	/*floyd_warshall(g);*/
+	/*printf("%u.\n", g->dist[3][2]);
+	printf("%u.\n", g->dist[2][1]);
+	printf("%u.\n", g->dist[3][1]);
+	printf("%u.\n", g->dist[4][1]);
+	printf("%u.\n", g->dist[5][1]);
+	printf("%u.\n", g->dist[5][0]);
+	printf("%u.\n", g->dist[0][5]);
+	printf("%u--.\n", g->dist[0][1]);
+	printf("%u--.\n", g->dist[7][0]);
+	printf("%u--.\n", g->dist[1][0]);
+	printf("%u--.\n", g->dist[0][9]);*/
+
+	/*unsigned int* a = g*et_out_neighbours(&g->node_array[0], g);
+	free(a);
+	a = get_out_neighbours(&g->node_array[1], g);
+	free(a);
+	a = get_in_neighbours(&g->node_array[0], g);
+	free(a);
+	unsigned int* b = get_in_neighbours(&g->node_array[1], g);
+	free(b);*/
+
+	/*update_dist(g->last_node->next, g);
+
+	unsigned int a = get_index(g->last_node->next->next, g);
+	printf("Index of %zu: %i.\n", g->last_node->next->next->index, a);*/
+
+	/*print_nodes_v(g);
+	print_edges_v(g);*/
+
+	/*int* res;
+	res = get_in_neighbours(g->last_node->next, g);
+	printf("%zu.\n", g->last_node->next->index);
+	printf("%i.\n", res[0]);
+	printf("%i.\n", res[1]);
+	printf("%i.\n", res[2]);
+	printf("%i.\n", res[3]);
+	printf("%i.\n", res[4]);
+	printf("%i.\n", res[5]);
+	printf("%i.\n", res[6]);
+
+	printf("%i.\n", get_weight(g->last_node->next->next, g->last_node->next));
+	*/
 
 	/* Tests. */
 	/*print_edge_array(g);
@@ -648,11 +739,15 @@ Error_enum parse_graph(char* file) {
 	buff = strtok(line, " ");
 	add_edge(buff, g, add_source(buff, g), add_destination(buff, g));
 
+	print_edge_array(g);
+	print_node_array(g);
 	printf("Removing the first node.\n");
 	remove_node(g->last_node->next, g);
 
 	printf("Removing the first edge.\n");
 	remove_edge(g->last_edge->next, g);
+	print_edge_array(g);
+	print_node_array(g);
 
 	printf("Manually adding.\n");
 	char line2[BUFSIZ] = "4 5 2 1231231232";
@@ -720,6 +815,7 @@ Error_enum parse_graph(char* file) {
 	print_node_array(g);
 	*/
 	/* End of tests. */
+	done_graph(g);
 
 	return NO_ERROR;
 }

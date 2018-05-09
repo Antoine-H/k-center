@@ -15,6 +15,7 @@ Main module
 #include "algo_trajectories.h"
 
 #include "data_graph.h"
+#include "dynamic_all_pairs_shortest_paths.h"
 
 #include <stdlib.h>
 #include <time.h>
